@@ -13,5 +13,5 @@ wheels/
 .env
 
 # Upload and Download folders
-Upload/
-Download/
+FilesUpload/
+FilesDownload/
