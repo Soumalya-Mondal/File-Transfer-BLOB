@@ -14,7 +14,7 @@
 
 ## ✨ Features
 
-- **🔼 Upload & 🔽 Download** — Interactive mode to choose between uploading files to Azure Blob Storage or downloading blobs locally.
+- **🔼 Upload, 🔽 Download & 🗑️ Remove** — Interactive mode to upload files to Azure Blob Storage, download blobs locally, or remove all blobs from the container.
 - **🔒 MD5 Integrity Verification** — Every file gets its MD5 hash calculated before upload and verified after both upload and download, ensuring data integrity.
 - **⚠️ Conflict Handling** — Detects existing files/blobs and prompts the user before overwriting or deleting.
 - **📁 Batch Processing** — Automatically processes all files inside the `FilesUpload` folder or downloads all blobs from the container at once.
@@ -83,7 +83,7 @@ uv run main.py
 You will be prompted to choose:
 
 ```
-Please Choose Operation (U for Upload / D for Download):
+Please Choose Operation (U for Upload / D for Download / R for Remove):
 ```
 
 ---
@@ -103,6 +103,13 @@ Please Choose Operation (U for Upload / D for Download):
 2. The tool will list all available blobs in the container.
 3. Each blob will be downloaded into the **`FilesDownload/`** directory.
 4. If a local file with the same name exists, it will ask if you want to overwrite it.
+
+### Removing Files
+
+1. Run the script and choose **R**.
+2. The tool will list all blobs currently in the container.
+3. Confirm the bulk deletion by entering **Y**.
+4. All listed blobs will be deleted from the container.
 
 ---
 

@@ -88,10 +88,15 @@ if __name__ == "__main__":
 
     # Ask User For Operation Choice:S7
     try:
-        user_choice = input('Please Choose Operation (U for Upload / D for Download): ').strip().lower()
-        if user_choice not in ('u', 'd'):
-            raise ValueError(f'Invalid choice: {user_choice}. Please enter "U" or "D".')
-        user_choice = 'Upload' if user_choice == 'u' else 'Download'
+        user_choice = input('Please Choose Operation (U for Upload / D for Download / R for Remove): ').strip().lower()
+        if user_choice not in ('u', 'd', 'r'):
+            raise ValueError(f'Invalid choice: {user_choice}. Please enter "U", "D", or "R".')
+        if user_choice == 'u':
+            user_choice = 'Upload'
+        elif user_choice == 'd':
+            user_choice = 'Download'
+        else:
+            user_choice = 'Remove'
         print_thick_separator()
         log('INFO', f'Selected Operation: {user_choice}')
     except Exception as error:
@@ -241,4 +246,50 @@ if __name__ == "__main__":
                     print_thin_separator()
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S19] - {str(error)}')
+                exit(1)
+
+    elif user_choice == 'Remove':
+        print_thick_separator()
+        log('INFO', 'Preparing To Remove File(s) From Azure Blob Storage...')
+
+        # List Available Blobs In Container:S20
+        try:
+            blob_list = get_blob_list()
+            if not blob_list:
+                log('WARN', 'No Blobs Found In Container. Nothing To Remove.')
+                exit(0)
+            log('SUCCESS', f'Found {len(blob_list)} Blob(s) That Will Be Removed:')
+            print_thin_separator()
+            for blob in blob_list:
+                log('INFO', f'- {blob.name}')
+        except Exception as error:
+            print(f'ERROR - [File-Transfer-BLOB:S20] - {str(error)}')
+            exit(1)
+
+        print_thick_separator()
+
+        # Ask For Bulk Confirmation Before Removing:S21
+        try:
+            remove_choice = input(f'Are You Sure You Want To Delete All {len(blob_list)} Blob(s)? (Y/N): ').strip().lower()
+            if remove_choice not in ('y', 'yes'):
+                log('WARN', 'Execution Stopped By User. No Blobs Were Removed.')
+                exit(0)
+        except Exception as error:
+            print(f'ERROR - [File-Transfer-BLOB:S21] - {str(error)}')
+            exit(1)
+
+        print_thick_separator()
+        log('INFO', f'Starting To Remove {len(blob_list)} Blob(s) From Azure Blob Storage...')
+
+        # Remove All Blobs From Azure Blob Storage:S22
+        for index, blob in enumerate(blob_list, 1):
+            total_blobs = len(blob_list)
+            print_thin_separator()
+            log('INFO', f'[{index}/{total_blobs}] {blob.name}')
+
+            try:
+                blob_container_client.delete_blob(blob.name)
+                log('SUCCESS', f'BLOB "{blob.name}" Removed Successfully.')
+            except Exception as error:
+                print(f'ERROR - [File-Transfer-BLOB:S22] - {str(error)}')
                 exit(1)
