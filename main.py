@@ -4,10 +4,10 @@ if __name__ == "__main__":
     try:
         from pathlib import Path
         from dotenv import load_dotenv
-        from azure.storage.blob import BlobServiceClient, ContentSettings
         import os
         import hashlib
-    except ImportError as error:
+        from azure.storage.blob import BlobServiceClient, ContentSettings
+    except Exception as error:
         print(f'ERROR - [File-Transfer-BLOB:S1] - {str(error)}')
         exit(1)
 
@@ -38,6 +38,34 @@ if __name__ == "__main__":
         print(f'ERROR - [File-Transfer-BLOB:S4] - {str(error)}')
         exit(1)
 
+    # Terminal Output Styling Helpers
+    class _TermStyle:
+        RESET = '\033[0m'
+        BLUE = '\033[94m'
+        GREEN = '\033[92m'
+        RED = '\033[91m'
+        YELLOW = '\033[93m'
+
+    _LEVEL_COLORS = {
+        'INFO': _TermStyle.BLUE,
+        'SUCCESS': _TermStyle.GREEN,
+        'ERROR': _TermStyle.RED,
+        'WARN': _TermStyle.YELLOW,
+    }
+
+    def log(level, message):
+        """Print a stylized log line with a colored level label."""
+        color = _LEVEL_COLORS.get(level, _TermStyle.RESET)
+        print(f'{color} {level:<7} {_TermStyle.RESET}{message}')
+
+    def print_thick_separator():
+        """Print a thick horizontal separator line."""
+        print('═' * 60)
+
+    def print_thin_separator():
+        """Print a thin horizontal separator line."""
+        print('─' * 60)
+
     # Define "calculate_md5" Function:S5
     try:
         def calculate_md5(file_path, chunk_size=4 * 1024 * 1024):
@@ -64,7 +92,8 @@ if __name__ == "__main__":
         if user_choice not in ('u', 'd'):
             raise ValueError(f'Invalid choice: {user_choice}. Please enter "U" or "D".')
         user_choice = 'Upload' if user_choice == 'u' else 'Download'
-        print(f'INFO - Selected Operation: {user_choice}')
+        print_thick_separator()
+        log('INFO', f'Selected Operation: {user_choice}')
     except Exception as error:
         print(f'ERROR - [File-Transfer-BLOB:S7] - {str(error)}')
         exit(1)
@@ -73,15 +102,21 @@ if __name__ == "__main__":
         # Loop Through All Files Inside "FilesUpload" Folder:S8
         try:
             file_paths_list = [file_path for file_path in files_upload_folder_path.iterdir() if file_path.is_file()]
-            print(f'SUCCESS - Found {len(file_paths_list)} File(s) In "FilesUpload" Folder:')
+            log('SUCCESS', f'Found {len(file_paths_list)} File(s) In "FilesUpload" Folder:')
+            print_thin_separator()
         except Exception as error:
             print(f'ERROR - [File-Transfer-BLOB:S8] - {str(error)}')
             exit(1)
 
-        print(f'\nINFO - Starting To Upload {len(file_paths_list)} File(s) To Azure Blob Storage...')
+        print_thick_separator()
+        log('INFO', f'Starting To Upload {len(file_paths_list)} File(s) To Azure Blob Storage...')
 
         # Loop Through All Files Inside "FilesUpload" Folder
-        for file_path in file_paths_list:
+        for index, file_path in enumerate(file_paths_list, 1):
+            total_files = len(file_paths_list)
+            print_thin_separator()
+            log('INFO', f'[{index}/{total_files}] {file_path.name}')
+
             # List Existing BLOBs:S9
             try:
                 blob_list = get_blob_list()
@@ -96,9 +131,9 @@ if __name__ == "__main__":
                     delete_choice = input(f'File "{file_path.name}" Already Exists In BLOB. Do You Want To Delete It? (Y/N): ').strip().lower()
                     if delete_choice in ('y', 'yes'):
                         blob_container_client.delete_blob(file_path.name)
-                        print(f'INFO - Existing BLOB "{file_path.name}" Deleted. Proceeding With Upload.')
+                        log('INFO', f'Existing BLOB "{file_path.name}" Deleted. Proceeding With Upload.')
                     else:
-                        print(f'INFO - Execution Stopped By User. File "{file_path.name}" Was Not Uploaded.')
+                        log('WARN', f'Execution Stopped By User. File "{file_path.name}" Was Not Uploaded.')
                         exit(1)
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S10] - {str(error)}')
@@ -128,60 +163,82 @@ if __name__ == "__main__":
             # Fetching BLOB Properties And Verifying File Integrity After Upload:S13
             try:
                 if ((local_file_size == upload_file_blob_client.get_blob_properties().size) and (upload_file_blob_client.get_blob_properties().content_settings.content_md5 == local_md5_hash)):
-                    print(f'SUCCESS - File "{file_path.name}" Uploaded Successfully With Verified Integrity.')
+                    log('SUCCESS', f'File "{file_path.name}" Uploaded Successfully With Verified Integrity.')
+                    print_thin_separator()
                 else:
-                    print(f'ERROR - File "{file_path.name}" Uploaded But Failed Integrity Verification.')
+                    log('ERROR', f'File "{file_path.name}" Uploaded But Failed Integrity Verification.')
+                    print_thin_separator()
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S13] - {str(error)}')
                 exit(1)
 
     elif user_choice == 'Download':
-        print(f'\nINFO - Starting To Download File(s) From Azure Blob Storage...')
+        print_thick_separator()
+        log('INFO', 'Starting To Download File(s) From Azure Blob Storage...')
 
         # List Available Blobs In Container:S14
         try:
             blob_list = get_blob_list()
-            print(f'SUCCESS - Found {len(blob_list)} Blob(s) In Container:')
+            log('SUCCESS', f'Found {len(blob_list)} Blob(s) In Container:')
+            print_thin_separator()
         except Exception as error:
             print(f'ERROR - [File-Transfer-BLOB:S14] - {str(error)}')
             exit(1)
 
         # Download All Files From Azure Blob Storage And Save To "FilesDownload" Folder
-        for blob in blob_list:
-            # Retrive BLOB Size And MD5 Hash Value From BLOB Properties:S15
+        for index, blob in enumerate(blob_list, 1):
+            total_blobs = len(blob_list)
+            print_thin_separator()
+            log('INFO', f'[{index}/{total_blobs}] {blob.name}')
+
+            # Retrive BLOB Properties:S15
             try:
                 output_file_path = files_download_folder_path / blob.name #type: ignore
                 download_file_blob_client = blob_container_client.get_blob_client(blob.name)
                 blob_properties = download_file_blob_client.get_blob_properties()
-                blob_file_size = blob_properties.size
-                blob_md5_hash = blob_properties.content_settings.content_md5
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S15] - {str(error)}')
                 exit(1)
 
-            # Download File From Azure BLOB Storage:S16
+            # Check If Local File With Same Name Exists And Ask User:S16
+            try:
+                if output_file_path.exists():
+                    overwrite_choice = input(f'File "{blob.name}" Already Exists In "FilesDownload" Folder. Do You Want To Overwrite It? (Y/N): ').strip().lower()
+                    if overwrite_choice in ('y', 'yes'):
+                        output_file_path.unlink()
+                        log('INFO', f'Existing Local File "{blob.name}" Deleted. Proceeding With Download.')
+                    else:
+                        log('WARN', f'Execution Stopped By User. File "{blob.name}" Was Not Downloaded.')
+                        exit(1)
+            except Exception as error:
+                print(f'ERROR - [File-Transfer-BLOB:S16] - {str(error)}')
+                exit(1)
+
+            # Download File From Azure BLOB Storage:S17
             try:
                 with open(output_file_path, 'wb') as output_file:
                     download_file_stream = download_file_blob_client.download_blob()
                     output_file.write(download_file_stream.readall())
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S16] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S17] - {str(error)}')
                 exit(1)
 
-            # Retrive Downloaded File Size And MD5 Hash Value:S17
+            # Retrive Downloaded File Size And MD5 Hash Value:S18
             try:
                 local_file_size = output_file_path.stat().st_size
                 local_md5_hash = calculate_md5(output_file_path)
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S17] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S18] - {str(error)}')
                 exit(1)
 
-            # Verify File Integrity After Download:S18
+            # Verify File Integrity After Download:S19
             try:
-                if ((local_file_size == blob_file_size) and (local_md5_hash == blob_md5_hash)):
-                    print(f'SUCCESS - File "{blob.name}" Downloaded Successfully With Verified Integrity.')
+                if ((local_file_size == blob_properties.size) and (local_md5_hash == blob_properties.content_settings.content_md5)):
+                    log('SUCCESS', f'File "{blob.name}" Downloaded Successfully With Verified Integrity.')
+                    print_thin_separator()
                 else:
-                    print(f'ERROR - File "{blob.name}" Downloaded But Failed Integrity Verification.')
+                    log('ERROR', f'File "{blob.name}" Downloaded But Failed Integrity Verification.')
+                    print_thin_separator()
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S18] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S19] - {str(error)}')
                 exit(1)
