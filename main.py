@@ -9,6 +9,7 @@ if __name__ == "__main__":
         import hashlib
     except ImportError as error:
         print(f'ERROR - [File-Transfer-BLOB:S1] - {str(error)}')
+        exit(1)
 
     # Define System Path:S2
     try:
@@ -18,22 +19,25 @@ if __name__ == "__main__":
         output_folder_path = parent_folder_path / 'FilesDownload'
     except Exception as error:
         print(f'ERROR - [File-Transfer-BLOB:S2] - {str(error)}')
+        exit(1)
 
     # Loading Environment Variables:S3
     try:
         load_dotenv(dotenv_path = env_file_path)
     except Exception as error:
         print(f'ERROR - [File-Transfer-BLOB:S3] - {str(error)}')
+        exit(1)
 
     # Ask User For Operation Choice:S4
     try:
-        user_choice = input('Please choose operation (Upload/Download): ').strip()
-        if user_choice not in ('Upload', 'Download'):
-            raise ValueError(f'Invalid choice: {user_choice}. Please enter "Upload" or "Download".')
-        print(f'INFO - Selected operation: {user_choice}')
+        user_choice = input('Please Choose Operation (U for Upload / D for Download): ').strip().lower()
+        if user_choice not in ('u', 'd'):
+            raise ValueError(f'Invalid choice: {user_choice}. Please enter "U" or "D".')
+        user_choice = 'Upload' if user_choice == 'u' else 'Download'
+        print(f'INFO - Selected Operation: {user_choice}')
     except Exception as error:
         print(f'ERROR - [File-Transfer-BLOB:S4] - {str(error)}')
-        raise
+        exit(1)
 
     if user_choice == 'Upload':
         # Loop Through All Files Inside "FilesUpload" Folder:S5
@@ -42,6 +46,7 @@ if __name__ == "__main__":
             print(f'SUCCESS - Found {len(file_paths_list)} File(s) In "FilesUpload" Folder:')
         except Exception as error:
             print(f'ERROR - [File-Transfer-BLOB:S5] - {str(error)}')
+            exit(1)
 
         print(f'\nINFO - Starting To Upload {len(file_paths_list)} File(s) To Azure Blob Storage...')
 
@@ -55,6 +60,7 @@ if __name__ == "__main__":
                 return md5_hash.digest()
         except Exception as error:
             print(f'ERROR - [File-Transfer-BLOB:S6] - {str(error)}')
+            exit(1)
 
         # Loop Through All Files Inside "FilesUpload" Folder
         for file_path in file_paths_list:
@@ -64,13 +70,15 @@ if __name__ == "__main__":
                 local_md5_hash = calculate_md5(file_path)
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S7] - {str(error)}')
+                exit(1)
 
             # Create BLOB Client:S8
             try:
-                upload_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('CONNECTION_STRING')))
-                upload_blob_container_client = upload_blob_service_client.get_container_client(str(os.getenv('CONTAINER_NAME')))
+                upload_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('BLOB_CONNECTION_STRING')))
+                upload_blob_container_client = upload_blob_service_client.get_container_client(str(os.getenv('BLOB_CONTAINER_NAME')))
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S8] - {str(error)}')
+                exit(1)
 
             # Upload File To Azure BLOB Storage With MD5 Hash Value Stored In BLOB Properties:S9
             try:
@@ -83,6 +91,7 @@ if __name__ == "__main__":
                     )
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S9] - {str(error)}')
+                exit(1)
 
             # Fetching BLOB Properties And Verifying File Integrity After Upload:S10
             try:
@@ -92,16 +101,18 @@ if __name__ == "__main__":
                     print(f'ERROR - File "{file_path.name}" Uploaded But Failed Integrity Verification.')
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S10] - {str(error)}')
+                exit(1)
 
     elif user_choice == 'Download':
         print(f'\nINFO - Starting To Download File(s) From Azure Blob Storage...')
 
         # Define BLOB Download Client Object:S11
         try:
-            download_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('CONNECTION_STRING')))
-            download_blob_container_client = download_blob_service_client.get_container_client(str(os.getenv('CONTAINER_NAME')))
+            download_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('BLOB_CONNECTION_STRING')))
+            download_blob_container_client = download_blob_service_client.get_container_client(str(os.getenv('BLOB_CONTAINER_NAME')))
         except Exception as error:
             print(f'ERROR - [File-Transfer-BLOB:S11] - {str(error)}')
+            exit(1)
 
         # List Available Blobs In Container:S12
         try:
@@ -109,6 +120,7 @@ if __name__ == "__main__":
             print(f'SUCCESS - Found {len(blob_list)} Blob(s) In Container:')
         except Exception as error:
             print(f'ERROR - [File-Transfer-BLOB:S12] - {str(error)}')
+            exit(1)
 
         # Download All Files From Azure Blob Storage And Save To "FilesDownload" Folder:S13
         try:
@@ -121,3 +133,4 @@ if __name__ == "__main__":
                 print(f'SUCCESS - File "{blob.name}" Downloaded')
         except Exception as error:
             print(f'ERROR - [File-Transfer-BLOB:S13] - {str(error)}')
+            exit(1)
