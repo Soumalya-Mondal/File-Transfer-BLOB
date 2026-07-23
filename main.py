@@ -76,23 +76,47 @@ if __name__ == "__main__":
 
         # Loop Through All Files Inside "FilesUpload" Folder
         for file_path in file_paths_list:
-            # Retrive File Size And MD5 Hash Value:S8
+            # List Existing BLOBs:S8
             try:
-                local_file_size = file_path.stat().st_size
-                local_md5_hash = calculate_md5(file_path)
+                blob_list = get_blob_list()
+                blob_exists = file_path.name in [blob.name for blob in blob_list]
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S8] - {str(error)}')
                 exit(1)
 
-            # Create BLOB Client:S9
+            # Delete Existing BLOB If User Confirms:S9
             try:
-                upload_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('BLOB_CONNECTION_STRING')))
-                upload_blob_container_client = upload_blob_service_client.get_container_client(str(os.getenv('BLOB_CONTAINER_NAME')))
+                if blob_exists:
+                    delete_choice = input(f'File "{file_path.name}" already exists in BLOB. Do you want to delete it? (Y/N): ').strip().lower()
+                    if delete_choice in ('y', 'yes'):
+                        delete_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('BLOB_CONNECTION_STRING')))
+                        delete_blob_container_client = delete_blob_service_client.get_container_client(str(os.getenv('BLOB_CONTAINER_NAME')))
+                        delete_blob_container_client.delete_blob(file_path.name)
+                        print(f'INFO - Existing BLOB "{file_path.name}" deleted. Proceeding with upload.')
+                    else:
+                        print(f'INFO - Execution stopped by user. File "{file_path.name}" was not uploaded.')
+                        exit(1)
             except Exception as error:
                 print(f'ERROR - [File-Transfer-BLOB:S9] - {str(error)}')
                 exit(1)
 
-            # Upload File To Azure BLOB Storage With MD5 Hash Value Stored In BLOB Properties:S10
+            # Retrive File Size And MD5 Hash Value:S10
+            try:
+                local_file_size = file_path.stat().st_size
+                local_md5_hash = calculate_md5(file_path)
+            except Exception as error:
+                print(f'ERROR - [File-Transfer-BLOB:S10] - {str(error)}')
+                exit(1)
+
+            # Create BLOB Client:S11
+            try:
+                upload_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('BLOB_CONNECTION_STRING')))
+                upload_blob_container_client = upload_blob_service_client.get_container_client(str(os.getenv('BLOB_CONTAINER_NAME')))
+            except Exception as error:
+                print(f'ERROR - [File-Transfer-BLOB:S11] - {str(error)}')
+                exit(1)
+
+            # Upload File To Azure BLOB Storage With MD5 Hash Value Stored In BLOB Properties:S12
             try:
                 upload_file_blob_client = upload_blob_container_client.get_blob_client(file_path.name)
                 with open(file_path, 'rb') as local_file_data:
@@ -102,41 +126,41 @@ if __name__ == "__main__":
                         content_settings = ContentSettings(content_md5 = local_md5_hash) #type: ignore
                     )
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S10] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S12] - {str(error)}')
                 exit(1)
 
-            # Fetching BLOB Properties And Verifying File Integrity After Upload:S11
+            # Fetching BLOB Properties And Verifying File Integrity After Upload:S13
             try:
                 if ((local_file_size == upload_file_blob_client.get_blob_properties().size) and (upload_file_blob_client.get_blob_properties().content_settings.content_md5 == local_md5_hash)):
                     print(f'SUCCESS - File "{file_path.name}" Uploaded Successfully With Verified Integrity.')
                 else:
                     print(f'ERROR - File "{file_path.name}" Uploaded But Failed Integrity Verification.')
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S11] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S13] - {str(error)}')
                 exit(1)
 
     elif user_choice == 'Download':
         print(f'\nINFO - Starting To Download File(s) From Azure Blob Storage...')
 
-        # Define BLOB Download Client Object:S12
+        # Define BLOB Download Client Object:S14
         try:
             download_blob_service_client = BlobServiceClient.from_connection_string(str(os.getenv('BLOB_CONNECTION_STRING')))
             download_blob_container_client = download_blob_service_client.get_container_client(str(os.getenv('BLOB_CONTAINER_NAME')))
         except Exception as error:
-            print(f'ERROR - [File-Transfer-BLOB:S12] - {str(error)}')
+            print(f'ERROR - [File-Transfer-BLOB:S14] - {str(error)}')
             exit(1)
 
-        # List Available Blobs In Container:S13
+        # List Available Blobs In Container:S15
         try:
             blob_list = get_blob_list()
             print(f'SUCCESS - Found {len(blob_list)} Blob(s) In Container:')
         except Exception as error:
-            print(f'ERROR - [File-Transfer-BLOB:S13] - {str(error)}')
+            print(f'ERROR - [File-Transfer-BLOB:S15] - {str(error)}')
             exit(1)
 
         # Download All Files From Azure Blob Storage And Save To "FilesDownload" Folder
         for blob in blob_list:
-            # Retrive BLOB Size And MD5 Hash Value From BLOB Properties:S14
+            # Retrive BLOB Size And MD5 Hash Value From BLOB Properties:S16
             try:
                 output_file_path = files_download_folder_path / blob.name #type: ignore
                 download_file_blob_client = download_blob_container_client.get_blob_client(blob.name)
@@ -144,32 +168,32 @@ if __name__ == "__main__":
                 blob_file_size = blob_properties.size
                 blob_md5_hash = blob_properties.content_settings.content_md5
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S14] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S16] - {str(error)}')
                 exit(1)
 
-            # Download File From Azure BLOB Storage:S15
+            # Download File From Azure BLOB Storage:S17
             try:
                 with open(output_file_path, 'wb') as output_file:
                     download_file_stream = download_file_blob_client.download_blob()
                     output_file.write(download_file_stream.readall())
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S15] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S17] - {str(error)}')
                 exit(1)
 
-            # Retrive Downloaded File Size And MD5 Hash Value:S16
+            # Retrive Downloaded File Size And MD5 Hash Value:S18
             try:
                 local_file_size = output_file_path.stat().st_size
                 local_md5_hash = calculate_md5(output_file_path)
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S16] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S18] - {str(error)}')
                 exit(1)
 
-            # Verify File Integrity After Download:S17
+            # Verify File Integrity After Download:S19
             try:
                 if ((local_file_size == blob_file_size) and (local_md5_hash == blob_md5_hash)):
                     print(f'SUCCESS - File "{blob.name}" Downloaded Successfully With Verified Integrity.')
                 else:
                     print(f'ERROR - File "{blob.name}" Downloaded But Failed Integrity Verification.')
             except Exception as error:
-                print(f'ERROR - [File-Transfer-BLOB:S17] - {str(error)}')
+                print(f'ERROR - [File-Transfer-BLOB:S19] - {str(error)}')
                 exit(1)
