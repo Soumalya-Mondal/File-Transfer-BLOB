@@ -2,13 +2,28 @@
 
 # 📦 File-Transfer-BLOB
 
-**A lightweight Python CLI tool for secure file upload & download with Azure Blob Storage**
+**A lightweight Python CLI tool for secure file upload, download & removal with Azure Blob Storage**
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![Azure](https://img.shields.io/badge/Azure-Blob%20Storage-0089D6?logo=microsoft-azure&logoColor=white)](https://azure.microsoft.com/en-us/services/storage/blobs/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 </div>
+
+---
+
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Project Structure](#-project-structure)
+- [Quick Start](#-quick-start)
+- [Usage Guide](#-usage-guide)
+- [Tech Stack](#-tech-stack)
+- [How It Works](#-how-it-works)
+- [Development](#-development)
+- [Environment Variables](#-environment-variables)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
@@ -34,11 +49,13 @@ File-Transfer-BLOB/
 ├── main.py                  # Main application script
 ├── pyproject.toml           # Project metadata & dependencies
 ├── uv.lock                  # uv lockfile for reproducible installs
-├── FilesUpload/             # Place files here to upload
+├── FilesUpload/             # Place files here to upload (auto-created, gitignored)
 │   └── (your files)
-└── FilesDownload/           # Downloaded blobs appear here
+└── FilesDownload/           # Downloaded blobs appear here (auto-created, gitignored)
     └── (your files)
 ```
+
+> 💡 **Note:** `FilesUpload/` and `FilesDownload/` are automatically created on first run and are listed in `.gitignore` so your data never gets committed.
 
 ---
 
@@ -138,6 +155,12 @@ FilesUpload/  ──►  Calculate MD5  ──►  Upload to Azure  ──►  V
 Azure Blobs  ──►  Download to FilesDownload/  ──►  Verify Size & MD5
 ```
 
+### Remove Flow
+
+```
+Azure Blobs  ──►  List All Blobs  ──►  Confirm With User  ──►  Delete All Blobs
+```
+
 ### Integrity Verification
 
 The tool computes an **MD5 hash** for every file and stores it as blob metadata during upload. After both upload and download, it compares:
@@ -194,7 +217,7 @@ Contributions are welcome! Please follow these steps:
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.
+This project is licensed under the [**MIT License**](LICENSE).
 
 ---
 
